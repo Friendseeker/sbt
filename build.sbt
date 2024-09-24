@@ -1178,13 +1178,7 @@ lazy val sbtClientProj = (project in file("client"))
     },
     nativeImageVersion := "23.0",
     nativeImageJvm := "graalvm-java23",
-    nativeImageOutput := {
-      val outputDir = (target.value / "bin").toPath
-      if (!Files.exists(outputDir)) {
-        Files.createDirectories(outputDir)
-      }
-      outputDir.resolve("sbtn").toFile
-    },
+    nativeImageOutput := target.value / "bin" / "sbtn",
     nativeImageOptions ++= Seq(
       "--no-fallback",
       s"--initialize-at-run-time=sbt.client",
