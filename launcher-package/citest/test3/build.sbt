@@ -3,12 +3,12 @@ lazy val checkNumericVersion = taskKey[Unit]("")
 lazy val checkScriptVersion = taskKey[Unit]("")
 lazy val checkVersion = taskKey[Unit]("")
 
-// 1.3.0, 1.3.0-M4
-lazy val versionRegEx = "\\d(\\.\\d+){2}(-\\w+)?"
+// 1.3.0, 1.3.0-M4, 1.10.4
+lazy val versionRegEx = "\\d+(\\.\\d+){2}(-\\w+)?"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.12.4",
+    scalaVersion := "2.12.20",
     name := "Hello",
     check := {
       val xs = IO.readLines(file("output.txt")).toVector
@@ -20,7 +20,7 @@ lazy val root = (project in file("."))
       assert(xs(2) startsWith "[info] Set current project to Hello")
       assert(xs(3) startsWith "[info] This is sbt")
       assert(xs(4) startsWith "[info] The current project")
-      assert(xs(5) startsWith "[info] The current project is built against Scala 2.12.4")
+      assert(xs(5) startsWith "[info] The current project is built against Scala 2.12.20")
 
       val ys = IO.readLines(file("err.txt")).toVector.distinct
 
