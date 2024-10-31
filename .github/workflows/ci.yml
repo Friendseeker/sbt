@@ -186,8 +186,7 @@ jobs:
         cd launcher-package
         bin/coursier resolve
         ../sbt -Dsbt.build.version=$TEST_SBT_VER integrationTest/test
-        # This fails due to the JLine issue
-        # cd citest && ./test.sh
+        cd citest && ./test.sh
     - name: Build and test (9)
       if: ${{ matrix.jobtype == 9 }}
       shell: bash
