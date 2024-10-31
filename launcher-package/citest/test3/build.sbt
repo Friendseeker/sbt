@@ -8,7 +8,7 @@ lazy val versionRegEx = "\\d(\\.\\d+){2}(-\\w+)?"
 
 lazy val root = (project in file("."))
   .settings(
-    scalaVersion := "2.12.4",
+    scalaVersion := "2.12.20",
     name := "Hello",
     check := {
       val xs = IO.readLines(file("output.txt")).toVector
