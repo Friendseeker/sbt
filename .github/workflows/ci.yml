@@ -167,6 +167,8 @@ jobs:
       run: |
         # test building sbtn on Linux
         sbt "-Dsbt.io.virtual=false" nativeImage
+        # smoke test native Image
+        ./client/target/bin/sbtn shutdown
         # test launcher script
         echo build using JDK 8 test using JDK 8 and JDK 11
         cd launcher-package
