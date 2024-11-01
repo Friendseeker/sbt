@@ -9,21 +9,19 @@
 package sbt.client;
 
 import sbt.internal.client.NetworkClient;
+import java.nio.file.Paths;
 import org.fusesource.jansi.AnsiConsole;
 
 public class Client {
   public static void main(final String[] args) {
     boolean isWin = System.getProperty("os.name").toLowerCase().startsWith("win");
-    boolean hadError = false;
     try {
       if (isWin) AnsiConsole.systemInstall();
       NetworkClient.main(args);
     } catch (final Throwable t) {
       t.printStackTrace();
-      hadError = true;
     } finally {
       if (isWin) AnsiConsole.systemUninstall();
-      if (hadError) System.exit(1);
     }
   }
 }
