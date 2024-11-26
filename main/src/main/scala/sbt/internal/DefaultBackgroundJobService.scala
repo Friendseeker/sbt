@@ -508,6 +508,15 @@ private[sbt] object DefaultBackgroundJobService {
     backgroundJobServices.values.forEach(_.shutdown())
     backgroundJobServices.clear()
   }
+
+  private[sbt] def stop(): Unit = {
+    backgroundJobServices
+      .values()
+      .forEach(jobService => {
+        jobService.jobs.foreach(jobService.stop)
+      })
+  }
+
   private[sbt] lazy val backgroundJobServiceSetting: Setting[_] =
     (GlobalScope / Keys.bgJobService) := {
       val path = (GlobalScope / sbt.Keys.bgJobServiceDirectory).value
