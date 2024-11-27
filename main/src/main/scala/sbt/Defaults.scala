@@ -2002,6 +2002,37 @@ object Defaults extends BuildCommon {
       }
     }
   }
+  
+  def bgRunTask(products: Initialize[Task[Classpath]],
+                classpath: Initialize[Task[Classpath]],
+                mainClassTask: Initialize[Task[Option[String]]],
+                copyClasspath: Initialize[Boolean],
+                scalaRun: Initialize[Task[ScalaRun]],
+                isForeground: Boolean): Initialize[InputTask[JobHandle]] = {
+    import Def.parserToInput
+    val parser = Def.spaceDelimited()
+    Def.inputTask {
+      val service = bgJobService.value
+      val mainClass = mainClassTask.value getOrElse sys.error("No main class detected.")
+      val hashClasspath = (bgRun / bgHashClasspath).value
+      val wrapper = termWrapper(canonicalInput.value, echoInput.value)
+      service.runInBackgroundWithLoader(resolvedScoped.value, state.value) { (logger, workingDir) =>
+        val files =
+          if (copyClasspath.value)
+            service.copyClasspath(products.value, classpath.value, workingDir, hashClasspath)
+          else classpath.value
+        val cp = data(files)
+        val args = parser.parsed
+        scalaRun.value match {
+          case r: Run =>
+            val loader = r.newLoader(cp)
+            (Some(loader), wrapper(() => r.runWithLoader(loader, cp, mainClass, args, logger).get))
+          case sr =>
+            (None, wrapper(() => sr.run(mainClass, cp, args, logger).get))
+        }
+      }
+    }
+  }
 
   def bgRunTask(
       products: Initialize[Task[Classpath]],

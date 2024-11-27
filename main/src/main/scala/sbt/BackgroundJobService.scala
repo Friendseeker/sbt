@@ -27,7 +27,7 @@ abstract class BackgroundJobService extends Closeable {
    *  then you could process.destroy() for example.
    */
   def runInBackground(spawningTask: ScopedKey[_], state: State)(
-      start: (Logger, File) => Unit
+      start: (Logger, File) => Unit, isForeground: Boolean
   ): JobHandle
 
   /**
@@ -39,9 +39,9 @@ abstract class BackgroundJobService extends Closeable {
    *  then you should get an InterruptedException while blocking on the process, and
    *  then you could process.destroy() for example.
    */
-  private[sbt] def runInBackgroundWithLoader(spawningTask: ScopedKey[_], state: State)(
+  private[sbt] def runInBackgroundWithLoader(spawningTask: ScopedKey[_], state: State, isForeground: Boolean)(
       start: (Logger, File) => (Option[ClassLoader], () => Unit)
-  ): JobHandle = runInBackground(spawningTask, state) { (logger, file) =>
+  ): JobHandle = runInBackground(spawningTask, state, isForeground) { (logger, file) =>
     start(logger, file)._2.apply()
   }
 
