@@ -115,7 +115,7 @@ private[sbt] abstract class AbstractBackgroundJobService extends BackgroundJobSe
       val logger: ManagedLogger,
       val workingDirectory: File,
       val job: BackgroundJob,
-      val isForeground: Boolean,
+      val isAutoCancel: Boolean,
   ) extends AbstractJobHandle {
     // EC for onStop handler below
     implicit val executionContext: ExecutionContext =
@@ -147,7 +147,7 @@ private[sbt] abstract class AbstractBackgroundJobService extends BackgroundJobSe
       spawningTask: ScopedKey[_],
       state: State,
       start: (Logger, File) => BackgroundJob,
-      isForeground: Boolean,
+      isAutoCancel: Boolean,
   ): JobHandle = {
     val id = nextId.getAndIncrement()
     val extracted = Project.extract(state)
@@ -156,7 +156,7 @@ private[sbt] abstract class AbstractBackgroundJobService extends BackgroundJobSe
     val workingDir = serviceTempDir / s"job-$id"
     IO.createDirectory(workingDir)
     val job = try {
-      new ThreadJobHandle(id, spawningTask, logger, workingDir, start(logger, workingDir), isForeground)
+      new ThreadJobHandle(id, spawningTask, logger, workingDir, start(logger, workingDir), isAutoCancel)
     } catch {
       case e: Throwable =>
         // TODO: Fix this
@@ -167,15 +167,15 @@ private[sbt] abstract class AbstractBackgroundJobService extends BackgroundJobSe
   }
 
   override def runInBackground(spawningTask: ScopedKey[_], state: State)(
-    start: (Logger, File) => Unit, isForeground: Boolean
+    start: (Logger, File) => Unit, isAutoCancel: Boolean
   ): JobHandle = {
-    pool.run(this, spawningTask, state, isForeground)(start)
+    pool.run(this, spawningTask, state, isAutoCancel)(start)
   }
 
-  override private[sbt] def runInBackgroundWithLoader(spawningTask: ScopedKey[_], state: State, isForeground: Boolean)(
+  override private[sbt] def runInBackgroundWithLoader(spawningTask: ScopedKey[_], state: State, isAutoCancel: Boolean)(
       start: (Logger, File) => (Option[ClassLoader], () => Unit)
   ): JobHandle = {
-    pool.runWithLoader(this, spawningTask, state, isForeground)(start)
+    pool.runWithLoader(this, spawningTask, state, isAutoCancel)(start)
   }
 
   override final def close(): Unit = shutdown()
@@ -462,7 +462,7 @@ private[sbt] class BackgroundThreadPool extends java.io.Closeable {
     }
   }
 
-  def run(manager: AbstractBackgroundJobService, spawningTask: ScopedKey[_], state: State, isForeground: Boolean)(
+  def run(manager: AbstractBackgroundJobService, spawningTask: ScopedKey[_], state: State, isAutoCancel: Boolean)(
       work: (Logger, File) => Unit
   ): JobHandle = {
     def start(logger: Logger, workingDir: File): BackgroundJob = {
@@ -472,14 +472,14 @@ private[sbt] class BackgroundThreadPool extends java.io.Closeable {
       executor.execute(runnable)
       runnable
     }
-    manager.doRunInBackground(spawningTask, state, start, isForeground)
+    manager.doRunInBackground(spawningTask, state, start, isAutoCancel)
   }
 
   private[sbt] def runWithLoader(
       manager: AbstractBackgroundJobService,
       spawningTask: ScopedKey[_],
       state: State,
-      isForeground: Boolean,
+      isAutoCancel: Boolean,
   )(
       getWork: (Logger, File) => (Option[ClassLoader], () => Unit)
   ): JobHandle = {
@@ -489,7 +489,7 @@ private[sbt] class BackgroundThreadPool extends java.io.Closeable {
       executor.execute(runnable)
       runnable
     }
-    manager.doRunInBackground(spawningTask, state, start, isForeground)
+    manager.doRunInBackground(spawningTask, state, start, isAutoCancel)
   }
 
   override def close(): Unit = {

@@ -1029,7 +1029,9 @@ object Defaults extends BuildCommon {
     copyResources := copyResourcesTask.value,
     // note that we use the same runner and mainClass as plain run
     mainBgRunMainTaskForConfig(This),
-    mainBgRunTaskForConfig(This)
+    mainBgRunTaskForConfig(This),
+    mainBgRunAutoCancelableTaskForConfig(This),
+    mainBgRunMainAutoCancelableTaskForConfig(This),
   ) ++ inTask(run)(runnerSettings ++ newRunnerSettings)
 
   private[this] lazy val configGlobal = globalDefaults(
@@ -1976,7 +1978,8 @@ object Defaults extends BuildCommon {
       products: Initialize[Task[Classpath]],
       classpath: Initialize[Task[Classpath]],
       copyClasspath: Initialize[Boolean],
-      scalaRun: Initialize[Task[ScalaRun]]
+      scalaRun: Initialize[Task[ScalaRun]],
+      isAutoCancel: Boolean,
   ): Initialize[InputTask[JobHandle]] = {
     val parser = Defaults.loadForParser(discoveredMainClasses)(
       (s, names) => Defaults.runMainParser(s, names getOrElse Nil)
@@ -1986,7 +1989,7 @@ object Defaults extends BuildCommon {
       val (mainClass, args) = parser.parsed
       val hashClasspath = (bgRunMain / bgHashClasspath).value
       val wrapper = termWrapper(canonicalInput.value, echoInput.value)
-      service.runInBackgroundWithLoader(resolvedScoped.value, state.value) { (logger, workingDir) =>
+      service.runInBackgroundWithLoader(resolvedScoped.value, state.value, isAutoCancel) { (logger, workingDir) =>
         val files =
           if (copyClasspath.value)
             service.copyClasspath(products.value, classpath.value, workingDir, hashClasspath)
@@ -2003,12 +2006,20 @@ object Defaults extends BuildCommon {
     }
   }
   
+  def bgRunMainTask(products: Initialize[Task[Classpath]],
+                    classpath: Initialize[Task[Classpath]],
+                    copyClasspath: Initialize[Boolean],
+                    scalaRun: Initialize[Task[ScalaRun]],
+                   ): Initialize[InputTask[JobHandle]] = {
+    bgRunMainTask(products, classpath, copyClasspath, scalaRun, isAutoCancel = false)
+  }
+  
   def bgRunTask(products: Initialize[Task[Classpath]],
                 classpath: Initialize[Task[Classpath]],
                 mainClassTask: Initialize[Task[Option[String]]],
                 copyClasspath: Initialize[Boolean],
                 scalaRun: Initialize[Task[ScalaRun]],
-                isForeground: Boolean): Initialize[InputTask[JobHandle]] = {
+                isAutoCancel: Boolean): Initialize[InputTask[JobHandle]] = {
     import Def.parserToInput
     val parser = Def.spaceDelimited()
     Def.inputTask {
@@ -2016,7 +2027,7 @@ object Defaults extends BuildCommon {
       val mainClass = mainClassTask.value getOrElse sys.error("No main class detected.")
       val hashClasspath = (bgRun / bgHashClasspath).value
       val wrapper = termWrapper(canonicalInput.value, echoInput.value)
-      service.runInBackgroundWithLoader(resolvedScoped.value, state.value) { (logger, workingDir) =>
+      service.runInBackgroundWithLoader(resolvedScoped.value, state.value, isAutoCancel) { (logger, workingDir) =>
         val files =
           if (copyClasspath.value)
             service.copyClasspath(products.value, classpath.value, workingDir, hashClasspath)
@@ -2041,29 +2052,7 @@ object Defaults extends BuildCommon {
       copyClasspath: Initialize[Boolean],
       scalaRun: Initialize[Task[ScalaRun]]
   ): Initialize[InputTask[JobHandle]] = {
-    import Def.parserToInput
-    val parser = Def.spaceDelimited()
-    Def.inputTask {
-      val service = bgJobService.value
-      val mainClass = mainClassTask.value getOrElse sys.error("No main class detected.")
-      val hashClasspath = (bgRun / bgHashClasspath).value
-      val wrapper = termWrapper(canonicalInput.value, echoInput.value)
-      service.runInBackgroundWithLoader(resolvedScoped.value, state.value) { (logger, workingDir) =>
-        val files =
-          if (copyClasspath.value)
-            service.copyClasspath(products.value, classpath.value, workingDir, hashClasspath)
-          else classpath.value
-        val cp = data(files)
-        val args = parser.parsed
-        scalaRun.value match {
-          case r: Run =>
-            val loader = r.newLoader(cp)
-            (Some(loader), wrapper(() => r.runWithLoader(loader, cp, mainClass, args, logger).get))
-          case sr =>
-            (None, wrapper(() => sr.run(mainClass, cp, args, logger).get))
-        }
-      }
-    }
+    bgRunTask(products, classpath, mainClassTask, copyClasspath, scalaRun, isAutoCancel = false)
   }
 
   // runMain calls bgRunMain in the background and waits for the result.
@@ -2261,6 +2250,8 @@ object Defaults extends BuildCommon {
 
   def mainBgRunTask = mainBgRunTaskForConfig(Select(Runtime))
   def mainBgRunMainTask = mainBgRunMainTaskForConfig(Select(Runtime))
+  def mainBgRunAutoCancelableTask = mainBgRunAutoCancelableTaskForConfig(Select(Runtime))
+  def mainBgRunMainAutoCancelableTask = mainBgRunMainAutoCancelableTaskForConfig(Select(Runtime))
 
   private[this] def mainBgRunTaskForConfig(c: ScopeAxis[ConfigKey]) =
     bgRun := bgRunTask(
@@ -2277,6 +2268,26 @@ object Defaults extends BuildCommon {
       This / c / This / fullClasspathAsJars,
       bgRunMain / bgCopyClasspath,
       run / runner
+    ).evaluated
+
+  private[this] def mainBgRunAutoCancelableTaskForConfig(c: ScopeAxis[ConfigKey]) =
+    bgRunAutoCancelable := bgRunTask(
+      exportedProductJars,
+      This / c / This / fullClasspathAsJars,
+      run / mainClass,
+      bgRun / bgCopyClasspath,
+      run / runner,
+      isAutoCancel = false,
+    ).evaluated
+    
+  private[this] def mainBgRunMainAutoCancelableTaskForConfig(c: ScopeAxis[ConfigKey]) =
+    bgRunMainAutoCancelable := bgRunTask(
+      exportedProductJars,
+      This / c / This / fullClasspathAsJars,
+      run / mainClass,
+      bgRun / bgCopyClasspath,
+      run / runner,
+      isAutoCancel = false,
     ).evaluated
 
   def discoverMainClasses(analysis: CompileAnalysis): Seq[String] = analysis match {
