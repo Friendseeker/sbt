@@ -713,10 +713,11 @@ object Defaults extends BuildCommon {
     clean := {
       val _ = cleanIvy.value
       try {
+        val setup = compileIncSetup.value
         val store = AnalysisUtil.staticCachedStore(
-          analysisFile = (Compile / compileAnalysisFile).value.toPath,
-          useTextAnalysis = !(Compile / enableBinaryCompileAnalysis).value,
-          useConsistent = (Compile / enableConsistentCompileAnalysis).value,
+          analysisFile = setup.cacheFile.toPath,
+          useTextAnalysis = !enableBinaryCompileAnalysis.value,
+          useConsistent = enableConsistentCompileAnalysis.value,
         )
         store.clearCache()
       } catch {
