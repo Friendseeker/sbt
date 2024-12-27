@@ -941,8 +941,7 @@ object Defaults extends BuildCommon {
         store.clearCache()
       } catch {
         case e: Throwable =>
-          exception = e
-          streams.value.log.info(s"${e.getLocalizedMessage}")
+          AnalysisUtil.processException(e, e => streams.value.log.info(s"${e.getLocalizedMessage}"))
       }
       streams.value.log.info("WRF")
     },

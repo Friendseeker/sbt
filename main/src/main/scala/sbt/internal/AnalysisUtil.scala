@@ -36,4 +36,8 @@ private[sbt] object AnalysisUtil {
       reproducible = false,
       parallelism = parallelism,
     )
+
+  def processException(exception: Throwable, process: Throwable => ()): Unit = {
+    process(exception)
+  }
 }
