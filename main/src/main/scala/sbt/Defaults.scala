@@ -930,8 +930,9 @@ object Defaults extends BuildCommon {
     }.value,
     clean := {
       val _ = (compileOutputs / clean).value
-      val setup = compileIncSetup.value
+      var exception: Throwable = null
       try {
+        val setup = compileIncSetup.value
         val store = AnalysisUtil.staticCachedStore(
           analysisFile = setup.cacheFile.toPath,
           useTextAnalysis = !enableBinaryCompileAnalysis.value,
@@ -939,8 +940,11 @@ object Defaults extends BuildCommon {
         )
         store.clearCache()
       } catch {
-        case NonFatal(_) => ()
+        case e: Throwable =>
+          exception = e
+          streams.value.log.info(s"${e.getLocalizedMessage}")
       }
+      streams.value.log.info("WRF")
     },
     earlyOutputPing := Def.promise[Boolean],
     compileProgress := {

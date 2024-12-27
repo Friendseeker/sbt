@@ -164,7 +164,13 @@ case class TestServer(
   val forkOptions =
     ForkOptions()
       .withOutputStrategy(OutputStrategy.StdoutOutput)
-      .withRunJVMOptions(Vector("-Djline.terminal=none", "-Dsbt.io.virtual=false"))
+      .withRunJVMOptions(
+        Vector(
+          "-Djline.terminal=none",
+          "-Dsbt.io.virtual=false",
+          "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:10004"
+        )
+      )
   val process =
     RunFromSourceMain.fork(forkOptions, baseDirectory, scalaVersion, sbtVersion, classpath)
 
