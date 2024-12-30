@@ -34,6 +34,7 @@ import sjsonnew.support.scalajson.unsafe.{ CompactPrinter, Converter, Parser => 
 import xsbti.CompileFailed
 
 import java.io.File
+import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.mutable
 
@@ -614,12 +615,19 @@ object BuildServerProtocol {
     val thisProjectRef = Keys.thisProjectRef.value
     val thisConfig = Keys.configuration.value
     val scalaJars = Keys.scalaInstance.value.allJars.map(_.toURI.toString)
+    val (javaHomeForTarget, isForkedJava) = javaHome.value match {
+      case Some(forkedJava) => (Some(forkedJava.toURI), true)
+      case None             => (sys.props.get("java.home").map(Paths.get(_)).map(_.toUri), false)
+    }
+    val javaVersionForTarget = extractJavaVersion(javacOptions.value, isForkedJava)
+    val jvmBuildTarget = JvmBuildTarget(javaHomeForTarget, javaVersionForTarget)
     val compileData = ScalaBuildTarget(
       scalaOrganization = scalaOrganization.value,
       scalaVersion = scalaVersion.value,
       scalaBinaryVersion = scalaBinaryVersion.value,
       platform = ScalaPlatform.JVM,
-      jars = scalaJars.toVector
+      jars = scalaJars.toVector,
+      jvmBuildTarget = jvmBuildTarget,
     )
     val configuration = Keys.configuration.value
     val displayName = BuildTargetName.fromScope(thisProject.id, configuration.name)
@@ -659,7 +667,11 @@ object BuildServerProtocol {
       scalaVersion = scalaProvider.version(),
       scalaBinaryVersion = binaryScalaVersion(scalaProvider.version()),
       platform = ScalaPlatform.JVM,
-      jars = scalaJars.toVector.map(_.toURI.toString)
+      jars = scalaJars.toVector.map(_.toURI.toString),
+      jvmBuildTarget = JvmBuildTarget(
+        sys.props.get("java.home").map(Paths.get(_)).map(_.toUri),
+        sys.props.get("java.version")
+      ),
     )
     val sbtVersionValue = sbtVersion.value
     val sbtData = SbtBuildTarget(
@@ -983,6 +995,26 @@ object BuildServerProtocol {
       bspTargetIdentifier.value,
       mainClasses.toVector
     )
+  }
+
+  private def extractJavaVersion(
+      javacOptions: Seq[String],
+      isForkedJava: Boolean
+  ): Option[String] = {
+    def getVersionAfterFlag(flag: String): Option[String] = {
+      val index = javacOptions.indexOf(flag)
+      if (index >= 0) javacOptions.lift(index + 1)
+      else None
+    }
+
+    val versionFromJavacOption = getVersionAfterFlag("--release")
+      .orElse(getVersionAfterFlag("--target"))
+      .orElse(getVersionAfterFlag("-target"))
+
+    versionFromJavacOption.orElse {
+      // TODO: extract java version from forked javac
+      if (isForkedJava) None else sys.props.get("java.version")
+    }
   }
 
   // naming convention still seems like the only reliable way to get IntelliJ to import this correctly

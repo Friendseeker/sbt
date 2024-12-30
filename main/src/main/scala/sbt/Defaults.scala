@@ -930,7 +930,6 @@ object Defaults extends BuildCommon {
     }.value,
     clean := {
       val _ = (compileOutputs / clean).value
-      var exception: Throwable = null
       try {
         val setup = compileIncSetup.value
         val store = AnalysisUtil.staticCachedStore(
@@ -943,7 +942,6 @@ object Defaults extends BuildCommon {
         case e: Throwable =>
           AnalysisUtil.processException(e, e => streams.value.log.info(s"${e.getLocalizedMessage}"))
       }
-      streams.value.log.info("WRF")
     },
     earlyOutputPing := Def.promise[Boolean],
     compileProgress := {

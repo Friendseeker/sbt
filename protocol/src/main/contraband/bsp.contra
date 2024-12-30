@@ -605,6 +605,17 @@ type RunResult {
 }
 
 
+# JVM extension
+
+## Contains jvm-specific metadata, specifically JDK reference
+type JvmBuildTarget {
+  ## Uri representing absolute path to jdk
+  javaHome: java.net.URI
+
+  ## The java version this target is supposed to use (can be set using javac `-target` flag)
+  javaVersion: String
+}
+
 # Scala Extension
 
 ## Contains scala-specific metadata for compiling a target containing Scala sources.
@@ -626,6 +637,9 @@ type ScalaBuildTarget {
 
   ## A sequence of Scala jars such as scala-library, scala-compiler and scala-reflect.
   jars: [String]!
+
+  ## The jvm build target describing jdk to be used
+  jvmBuildTarget: sbt.internal.bsp.JvmBuildTarget
 }
 
 ## Scalac options
