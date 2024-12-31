@@ -54,14 +54,27 @@ object Incomplete extends Enumeration {
     val visited = IDSet.create[Incomplete]
     def visit(inc: Incomplete): Unit =
       visited.process(inc)(()) {
-        f(inc)
         inc.causes.foreach(visit)
+        f(inc)
       }
     visit(i)
   }
+
+  def allPaths(root: Incomplete): Seq[Seq[Incomplete]] = {
+    if (root.causes.isEmpty) {
+      Seq(Seq(root))
+    } else {
+      root.causes.flatMap { child =>
+        allPaths(child).map { path =>
+          root +: path
+        }
+      }
+    }
+  }
+
   def linearize(i: Incomplete): Seq[Incomplete] = {
     val ordered = ListBuffer[Incomplete]()
-    visitAll(i) { ordered += _ }
+    visitAll(i) { _ +=: ordered }
     ordered.toList
   }
   def allExceptions(is: Seq[Incomplete]): Iterable[Throwable] =

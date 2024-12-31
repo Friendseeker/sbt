@@ -37,7 +37,7 @@ private[sbt] object AnalysisUtil {
       parallelism = parallelism,
     )
 
-  def processException(exception: Throwable, process: Throwable => ()): Unit = {
-    process(exception)
+  def processException(exception: Throwable): Unit = {
+    exception.printStackTrace()
   }
 }

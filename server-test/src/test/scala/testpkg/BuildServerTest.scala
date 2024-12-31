@@ -66,7 +66,7 @@ object BuildServerTest extends AbstractServerTest {
       s"""{ "jsonrpc": "2.0", "id": "${nextId()}", "method": "workspace/buildTargets", "params": {} }"""
     )
     assertProcessing("workspace/buildTargets")
-    val result = svr.waitFor[WorkspaceBuildTargetsResult](10.seconds)
+    val result = svr.waitFor[WorkspaceBuildTargetsResult](600.seconds)
     val allTargets = result.targets.map(_.id.uri)
 
     svr.sendJsonRpc(

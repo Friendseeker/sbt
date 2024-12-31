@@ -933,14 +933,14 @@ object Defaults extends BuildCommon {
       try {
         val setup = compileIncSetup.value
         val store = AnalysisUtil.staticCachedStore(
-          analysisFile = setup.cacheFile.toPath,
+          analysisFile = setup.cachePath(),
           useTextAnalysis = !enableBinaryCompileAnalysis.value,
           useConsistent = enableConsistentCompileAnalysis.value,
         )
         store.clearCache()
       } catch {
         case e: Throwable =>
-          AnalysisUtil.processException(e, e => streams.value.log.info(s"${e.getLocalizedMessage}"))
+          AnalysisUtil.processException(e)
       }
     },
     earlyOutputPing := Def.promise[Boolean],
